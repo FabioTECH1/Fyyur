@@ -66,6 +66,7 @@
                   (request.endpoint == 'venues') %}
                       <link rel="stylesheet" href="/static/css/app.css">
                       <input type="text" class="form-control" placeholder="City" name="city">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       {{ form.state(class_ = 'form-control', placeholder='State' ) }}
                       <input type="submit" value="Search" class="form-control btn-primary">
 
@@ -86,6 +87,7 @@
                       <link rel="stylesheet" href="/static/css/app.css">
               
                       <input type="text" class="form-control" placeholder="City" name="city">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       {{ form.state(class_ = 'form-control', placeholder='State' ) }}
                       <input type="submit" value="Search" class="btn-primary form-control">
                   {% endif %} 

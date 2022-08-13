@@ -79,6 +79,7 @@
 <br>
 <br>
 <form action="/venues/{{ venue.id }}/delete" method="post" class="">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<button class="btn btn-primary btn-lg">Delete</button>
 </form>
 

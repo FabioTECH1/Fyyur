@@ -13,6 +13,7 @@
             <h5><a href="/venues/{{ show.venue_id }}">{{ show.venue_name }}</a></h5>
         </div>
         <form action="/show/{{ show.id }}/delete" method="post" class="text-center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-primary btn-sm">Delete</button>
         </form>        
     </div>

@@ -1,6 +1,9 @@
 #----------------------------------------------------------------------------#
 # Imports
 #----------------------------------------------------------------------------#
+import re
+from sqlalchemy.exc import IntegrityError
+from wtforms import ValidationError
 import sys
 import dateutil.parser
 import babel
@@ -14,6 +17,20 @@ from models import Venue
 from models import Show
 from models import db
 from models import app
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect(app)
+
+
+
+
+#----------------------------------------------------------------------------#
+# Validators.
+#----------------------------------------------------------------------------# 
+def validate_phone(phone):
+    us_phone_num = '^([0-9]{3})[-][0-9]{3}[-][0-9]{4}$'
+    match = re.search(us_phone_num, phone)
+    if not match:
+        raise ValidationError('Error, Phone number must be in format XXX-XXX-XXXX')
 
 
 #----------------------------------------------------------------------------#
@@ -35,15 +52,18 @@ app.jinja_env.filters['datetime'] = format_datetime
 @app.route('/')
 def index():
   data = []
-  venues = Venue.query.group_by(Venue.city,Venue.state,Venue.id).with_entities(Venue.city,Venue.state).order_by(Venue.id.desc()).limit(10)
+  #  data = []
+  venues = Venue.query.group_by(Venue.city,Venue.state).with_entities(Venue.city,Venue.state).all()
   for venue in venues:
     venue_info = []
     filtered_venue = Venue.query.filter_by(state=venue.state,city=venue.city).all()
 
     for f_venue in filtered_venue:
+      upcoming_shows = Show.query.join(Venue).filter(Show.venue_id==Venue.id, Show.start_time > datetime.now()).all()
       venue_info.append({
         'id': f_venue.id,
         'name':f_venue.name,
+        'num_upcoming_shows':len(upcoming_shows)
       })
     data.append({
       'city':venue.city,
@@ -173,9 +193,10 @@ def create_venue_form():
 # create venue  
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-
   form = VenueForm(request.form)
-  try:      
+
+  try:    
+    validate_phone(form.phone.data)   #validate phone number
     venue = Venue(name=form.name.data, 
                   city=form.city.data, 
                   state=form.state.data, 
@@ -190,11 +211,17 @@ def create_venue_submission():
 
     db.session.add(venue)
     db.session.commit()
-    flash('Venue ' + form.name.data + ' was successfully listed!'.format(venue.name))
-  except Exception as err:
+    flash('Venue ' + form.name.data + ' was successfully listed!')
+  except ValidationError as err:
+    flash(str(err))
+    db.session.rollback()
+  except IntegrityError:
+    flash('Error, Phone number used by another artists')
+    db.session.rollback()
+  except:
     print(sys.exc_info())
     db.session.rollback()
-    flash('An error occurred. Venue ' + form.name.data + ' could not be listed. Error: {0}' .format(venue.name,err))
+    flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
   finally:
     db.session.close()
     return redirect(url_for('index'))
@@ -337,6 +364,8 @@ def edit_artist_submission(artist_id):
 
   try:
     form = ArtistForm(request.form)
+    validate_phone(form.phone.data)   #validate phone number
+
     artist = Artist.query.get(artist_id)
 
     artist.name = form.name.data
@@ -350,11 +379,17 @@ def edit_artist_submission(artist_id):
     artist.seeking_description = form.seeking_description.data
     artist.image_link = form.image_link.data
     db.session.commit()
-    flash('Artist ' + form.name.data + ' updated successfully.' .format(artist.name))
-  except Exception as err:
+    flash('Artist ' + form.name.data + ' updated successfully.')
+  except ValidationError as err:
+    db.session.rollback()
+    flash(str(err))
+  except IntegrityError:
+    flash('Error, Phone number used by another artists')
+    db.session.rollback()  
+  except:
     print(sys.exc_info())
     db.session.rollback()
-    flash('An error occurred. Artist ' + form.name.data + ' could not be updated. Error: {0}' .format(artist.name, err))
+    flash('An error occurred. Artist ' + form.name.data + ' could not be updated.')
   finally:
     db.session.close()
     return redirect(url_for('show_artist', artist_id=artist_id))
@@ -386,6 +421,8 @@ def edit_venue_submission(venue_id):
 
   try:
     form = VenueForm(request.form)
+    validate_phone(form.phone.data)   #validate phone number
+
     venue = Venue.query.get(venue_id)
 
     venue.name = form.name.data
@@ -400,11 +437,17 @@ def edit_venue_submission(venue_id):
     venue.seeking_description = form.seeking_description.data
     venue.image_link = form.image_link.data
     db.session.commit()
-    flash('Venue ' + form.name.data + ' updated successfully.' .format(venue.name))
-  except Exception as err:
+    flash('Venue ' + form.name.data + ' updated successfully.')
+  except ValidationError as err:
+    flash(str(err))
+    db.session.rollback()
+  except IntegrityError:
+    flash('Error, Phone number used by another artists')
+    db.session.rollback()
+  except:
     print(sys.exc_info())
     db.session.rollback()
-    flash('An error occurred. Venue ' + form.name.data + ' could not be updated. Error: {0}' .format(venue.name, err))
+    flash('An error occurred. Venue ' + form.name.data + ' could not be updated.')
   finally:
     db.session.close()
     return redirect(url_for('show_venue', venue_id=venue_id))
@@ -421,9 +464,12 @@ def create_artist_form():
 # create artist 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
+  
 
-  form = ArtistForm(request.form)
-  try:      
+
+  try:   
+    form = ArtistForm(request.form)
+    validate_phone(form.phone.data)   #validate phone number   
     artist = Artist(name=form.name.data, 
                     city=form.city.data, 
                     state=form.state.data, 
@@ -436,11 +482,17 @@ def create_artist_submission():
                     seeking_description=form.seeking_description.data)
     db.session.add(artist)
     db.session.commit()
-    flash('Artist ' + form.name.data + ' was successfully listed!' .format(artist.name))
-  except Exception as err:
+    flash('Artist ' + form.name.data + ' was successfully listed!')
+  except ValidationError as err:
+    flash(str(err))
+    db.session.rollback()
+  except IntegrityError:
+    flash('Error, Phone number used by another artists')
+    db.session.rollback()
+  except:
     print(sys.exc_info())
     db.session.rollback()
-    flash('An error occurred. Artist ' + form.name.data + ' could not be listed. Error: {0}' .format(artist.name, err))
+    flash('An error occurred. Artist ' + form.name.data + ' could not be listed.')
   finally:
     db.session.close()
     return redirect(url_for('index'))
@@ -507,11 +559,11 @@ def create_show_submission():
                 start_time=form.start_time.data)
     db.session.add(show)
     db.session.commit()
-    flash('Show was successfully listed!' .format(show.venue_id))
-  except Exception as err:
+    flash('Show was successfully listed!')
+  except:
     print(sys.exc_info())
     db.session.rollback()
-    flash('An error occurred. Show could not be listed. Error: {0}' .format(show.venue_id, err))
+    flash('An error occurred. Show could not be listed.')
   finally:
     db.session.close()
     return redirect(url_for('index'))
