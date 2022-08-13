@@ -1,0 +1,9 @@
+form.search{
+    width:450px !important
+}
+.btn-primary{
+    background-color:#ffc63a !important;
+}
+.btn-primary:focus{
+    background-color: #ffb707 !important;
+}
