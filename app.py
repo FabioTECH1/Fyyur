@@ -145,18 +145,18 @@ def venues():
     filtered_venue = Venue.query.filter_by(state=venue.state,city=venue.city).all()
 
     for f_venue in filtered_venue:
-      num_upcoming_shows = Show.query.filter(Show.venue_id==f_venue.id, Show.start_time > datetime.now()).all()
+      upcoming_shows = Show.query.join(Venue).filter(Show.venue_id==Venue.id, Show.start_time > datetime.now()).all()
       venue_info.append({
         'id': f_venue.id,
         'name':f_venue.name,
-        'num_upcoming_shows':len(num_upcoming_shows)
+        'num_upcoming_shows':len(upcoming_shows)
       })
     data.append({
       'city':venue.city,
       'state':venue.state,
       'venues':venue_info,
     })
-
+    print(len(upcoming_shows))
   return render_template('pages/venues.html', areas=data, form=form)
 
 # search for venues 
@@ -180,7 +180,6 @@ def search_venues():
     "count": len(venues),
     "data": venues
   }
-  # return str(len(venues))
   return render_template('pages/search_venues.html', results=response, search_term=search_term, state=state, city=city, form=form)
 
 # view venue info 
